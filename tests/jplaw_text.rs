@@ -55,8 +55,8 @@ const LAW_XML: &str = r#"
 "#;
 
 #[tokio::test]
-fn check1() {
-  let mut reader = BufReader::from_reader(LAW_XML.as_bytes()).await;
+async fn check1() {
+  let mut reader = Reader::from_reader(BufReader::new(LAW_XML.as_bytes()));
 
   let target = ArticleTargetInfo {
     article: "30".to_string(),
@@ -86,8 +86,8 @@ fn check1() {
 
 
 #[tokio::test]
-fn check2() {
-  let mut reader = BufReader::from_reader(LAW_XML.as_bytes()).await;
+async fn check2() {
+  let mut reader = Reader::from_reader(BufReader::new(LAW_XML.as_bytes()));
 
   let target = ArticleTargetInfo {
     article: "30".to_string(),
