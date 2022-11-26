@@ -1,6 +1,6 @@
 [package]
 name = "jplaw_text"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 authors = ["Naoki Kaneko <puripuri2100@gmail.com>"]
@@ -11,6 +11,10 @@ description = "e-govで公開されている条例XMデータから指定され�
 
 [dependencies]
 encoding_rs = "0.8.31"
-quick-xml = { version = "0.26.0", features = ["encoding"] }
+quick-xml = { version = "0.26.0", features = ["async-tokio", "encoding"] }
 serde = { version = "1.0.147", features = ["derive"] }
 thiserror = "1.0.37"
+tokio = "1.22.0"
+
+[dev-dependencies]
+tokio = {version="1.22.0", features=["macros"]}

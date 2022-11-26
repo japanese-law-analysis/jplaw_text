@@ -1,5 +1,6 @@
 use jplaw_text::*;
 use quick_xml::Reader;
+use tokio::{self, io::BufReader};
 
 const LAW_XML: &str = r#"
 <Section Num="4">
@@ -53,9 +54,9 @@ const LAW_XML: &str = r#"
 </Section>
 "#;
 
-#[test]
+#[tokio::test]
 fn check1() {
-  let mut reader = Reader::from_reader(LAW_XML.as_bytes());
+  let mut reader = BufReader::from_reader(LAW_XML.as_bytes()).await;
 
   let target = ArticleTargetInfo {
     article: "30".to_string(),
@@ -79,14 +80,14 @@ fn check1() {
       contents : "んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string()
     },
   ];
-  let gen_law_text_lst = search_law_text(&mut reader, &target).unwrap();
+  let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
 
 
-#[test]
+#[tokio::test]
 fn check2() {
-  let mut reader = Reader::from_reader(LAW_XML.as_bytes());
+  let mut reader = BufReader::from_reader(LAW_XML.as_bytes()).await;
 
   let target = ArticleTargetInfo {
     article: "30".to_string(),
@@ -122,7 +123,7 @@ fn check2() {
       contents : "んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string()
     },
   ];
-  let gen_law_text_lst = search_law_text(&mut reader, &target).unwrap();
+  let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
 

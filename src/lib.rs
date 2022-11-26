@@ -1,6 +1,6 @@
-use std::io::BufRead;
 
 use encoding_rs::UTF_8;
+use tokio::io::AsyncBufRead;
 use quick_xml::{encoding, events::Event, Reader};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -37,12 +37,12 @@ pub struct ArticleTargetInfo {
   pub suppl_provision_title: Option<String>,
 }
 
-pub fn search_law_text<T>(
+pub async fn search_law_text<T>(
   xml_reader: &mut Reader<T>,
   target: &ArticleTargetInfo,
 ) -> Result<Vec<LawText>, SearchArticleError>
 where
-  T: BufRead,
+  T: AsyncBufRead + Unpin
 {
   let mut buf = Vec::new();
   xml_reader.trim_text(true);
@@ -101,7 +101,7 @@ where
   let mut is_child = false;
 
   loop {
-    match xml_reader.read_event_into(&mut buf) {
+    match xml_reader.read_event_into_async(&mut buf).await {
       Ok(Event::Start(tag)) => match tag.name().as_ref() {
         b"Article" => {
           let article_num_str = tag
