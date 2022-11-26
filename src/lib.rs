@@ -289,7 +289,7 @@ where
                 .unwrap()
                 .to_string()
             })
-            .unwrap();
+            .unwrap_or_default();
           is_target_suppl_provision =
             Some(suppl_provision_title_str) == target.suppl_provision_title;
         }
