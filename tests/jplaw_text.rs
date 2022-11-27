@@ -69,21 +69,12 @@ async fn check1() {
   let law_text_lst = vec![
     LawText {
       is_child : false,
-      contents : "戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が".to_string()
-    },
-    LawText {
-      is_child : false,
-      contents : "止".to_string()
-    },
-    LawText {
-      is_child : false,
-      contents : "んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string()
+      contents : "戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string()
     },
   ];
   let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
-
 
 #[tokio::test]
 async fn check2() {
@@ -100,30 +91,13 @@ async fn check2() {
   let law_text_lst = vec![
     LawText {
       is_child : true,
-      contents : "不在者の生死が七年間明らかでないときは、家庭裁判所は、利害関係人の請求により、失".to_string()
+      contents : "不在者の生死が七年間明らかでないときは、家庭裁判所は、利害関係人の請求により、失踪の宣告をすることができる。".to_string()
     },
     LawText {
       is_child : true,
-      contents : "踪".to_string()
-    },
-    LawText {
-      is_child : true,
-      contents : "の宣告をすることができる。".to_string()
-    },
-    LawText {
-      is_child : true,
-      contents : "戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が".to_string()
-    },
-    LawText {
-      is_child : true,
-      contents : "止".to_string()
-    },
-    LawText {
-      is_child : true,
-      contents : "んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string()
+      contents : "戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string()
     },
   ];
   let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
-
