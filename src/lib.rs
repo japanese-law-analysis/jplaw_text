@@ -130,6 +130,7 @@ where
 
   let mut tmp_text = String::new();
 
+  let mut is_table_column = false;
   let mut tmp_table_row = Vec::new();
   let mut tmp_table_col = Vec::new();
   let mut tmp_rowspan = 1;
@@ -412,6 +413,7 @@ where
             })
             .unwrap_or(1);
           tmp_colspan = col_span;
+          is_table_column = true;
         }
         _ => (),
       },
@@ -523,8 +525,11 @@ where
               contents: LawTableContents::Text(tmp_text),
             };
             tmp_table_col.push(law_column);
-            tmp_text = String::new();
           }
+          tmp_rowspan = 1;
+          tmp_colspan = 1;
+          tmp_text = String::new();
+          is_table_column = false;
         }
         b"TableRow" => {
           if !tmp_text.is_empty() {
@@ -532,18 +537,20 @@ where
               row: tmp_table_col.clone(),
             };
             tmp_table_row.push(row);
-            tmp_table_col = Vec::new();
-            tmp_rowspan = 1;
-            tmp_colspan = 1;
-            tmp_text = String::new();
           }
+          tmp_table_col = Vec::new();
+          tmp_rowspan = 1;
+          tmp_colspan = 1;
+          tmp_text = String::new();
         }
         b"Table" => {
-          let law_text = LawText {
-            is_child: is_child,
-            contents: LawContents::Table(tmp_table_row.clone()),
-          };
-          law_text_lst.push(law_text);
+          if !tmp_table_row.is_empty() {
+            let law_text = LawText {
+              is_child: is_child,
+              contents: LawContents::Table(tmp_table_row.clone()),
+            };
+            law_text_lst.push(law_text);
+          }
           tmp_table_row = Vec::new();
           tmp_table_col = Vec::new();
           tmp_rowspan = 1;
@@ -554,20 +561,21 @@ where
       },
       Ok(Event::Text(text)) => {
         if is_target_article
-          && is_target_paragraph
-          && is_target_item
-          && is_target_sub_item_1
-          && is_target_sub_item_2
-          && is_target_sub_item_3
-          && is_target_sub_item_4
-          && is_target_sub_item_5
-          && is_target_sub_item_6
-          && is_target_sub_item_7
-          && is_target_sub_item_8
-          && is_target_sub_item_9
-          && is_target_suppl_provision
-          && is_sentence
-          && !is_ruby_rt
+          && ((is_target_paragraph
+            && is_target_item
+            && is_target_sub_item_1
+            && is_target_sub_item_2
+            && is_target_sub_item_3
+            && is_target_sub_item_4
+            && is_target_sub_item_5
+            && is_target_sub_item_6
+            && is_target_sub_item_7
+            && is_target_sub_item_8
+            && is_target_sub_item_9
+            && is_target_suppl_provision
+            && is_sentence
+            && !is_ruby_rt)
+            || is_table_column)
         {
           let text_str = encoding::decode(&text.into_inner(), UTF_8)
             .unwrap()

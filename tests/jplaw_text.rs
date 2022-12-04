@@ -188,7 +188,7 @@ async fn check3() {
           LawTableColumn {
             rowspan: 1,
             colspan: 1,
-            contents: LawTableContents::Text("第四条第三項<".to_string()),
+            contents: LawTableContents::Text("第四条第三項".to_string()),
           },
           LawTableColumn {
             rowspan: 1,
