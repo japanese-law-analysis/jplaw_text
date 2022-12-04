@@ -13,9 +13,33 @@ pub enum SearchArticleError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum LawTableContents {
+  Text(String),
+  // Link { row: usize, column: usize },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct LawTableColumn {
+  pub rowspan: usize,
+  pub colspan: usize,
+  pub contents: LawTableContents,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub struct LawTable {
+  pub row: Vec<LawTableColumn>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
+pub enum LawContents {
+  Text(String),
+  Table(Vec<LawTable>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct LawText {
   pub is_child: bool,
-  pub contents: String,
+  pub contents: LawContents,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, Default)]
@@ -91,6 +115,11 @@ where
     .as_ref()
     .map(|(i, _)| *i < 8)
     .unwrap_or(true);
+  let mut is_target_sub_item_9 = target
+    .sub_item
+    .as_ref()
+    .map(|(i, _)| *i < 9)
+    .unwrap_or(true);
   let mut is_target_suppl_provision = target.suppl_provision_title.is_none();
 
   let mut is_ruby_rt = false;
@@ -100,6 +129,11 @@ where
   let mut is_child = false;
 
   let mut tmp_text = String::new();
+
+  let mut tmp_table_row = Vec::new();
+  let mut tmp_table_col = Vec::new();
+  let mut tmp_rowspan = 1;
+  let mut tmp_colspan = 1;
 
   loop {
     match xml_reader.read_event_into_async(&mut buf).await {
@@ -147,7 +181,7 @@ where
           is_target_item = target.item.as_ref().map(|s| s == &num_str).unwrap_or(true);
           is_child = target.item.is_none();
         }
-        b"SubItem1" => {
+        b"Subitem1" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -168,7 +202,7 @@ where
             .map(|(i, _)| *i < 1)
             .unwrap_or(true);
         }
-        b"SubItem2" => {
+        b"Subitem2" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -189,7 +223,7 @@ where
             .map(|(i, _)| *i < 2)
             .unwrap_or(true);
         }
-        b"SubItem3" => {
+        b"Subitem3" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -210,7 +244,7 @@ where
             .map(|(i, _)| *i < 3)
             .unwrap_or(true);
         }
-        b"SubItem4" => {
+        b"Subitem4" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -231,7 +265,7 @@ where
             .map(|(i, _)| *i < 4)
             .unwrap_or(true);
         }
-        b"SubItem5" => {
+        b"Subitem5" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -252,7 +286,7 @@ where
             .map(|(i, _)| *i < 6)
             .unwrap_or(true);
         }
-        b"SubItem6" => {
+        b"Subitem6" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -273,7 +307,7 @@ where
             .map(|(i, _)| *i < 6)
             .unwrap_or(true);
         }
-        b"SubItem7" => {
+        b"Subitem7" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -294,7 +328,7 @@ where
             .map(|(i, _)| *i < 7)
             .unwrap_or(true);
         }
-        b"SubItem8" => {
+        b"Subitem8" => {
           let num_str = tag
             .attributes()
             .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
@@ -315,6 +349,27 @@ where
             .map(|(i, _)| *i < 8)
             .unwrap_or(true);
         }
+        b"Subitem9" => {
+          let num_str = tag
+            .attributes()
+            .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "Num")
+            .map(|res| {
+              encoding::decode(&res.unwrap().value, UTF_8)
+                .unwrap()
+                .to_string()
+            })
+            .unwrap();
+          is_target_sub_item_9 = target
+            .sub_item
+            .as_ref()
+            .map(|(i, s)| *i == 8 && s == &num_str)
+            .unwrap_or(true);
+          is_child = target
+            .sub_item
+            .as_ref()
+            .map(|(i, _)| *i < 9)
+            .unwrap_or(true);
+        }
         b"SupplProvision" => {
           let suppl_provision_title_str = tag
             .attributes()
@@ -332,9 +387,32 @@ where
         }
         b"Sentence" => {
           is_sentence = true;
-          tmp_text = String::new();
         }
         b"Rt" => is_ruby_rt = true,
+        b"TableColumn" => {
+          let row_span = tag
+            .attributes()
+            .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "rowspan")
+            .map(|res| {
+              encoding::decode(&res.unwrap().value, UTF_8)
+                .unwrap()
+                .parse::<usize>()
+                .unwrap()
+            })
+            .unwrap_or(1);
+          tmp_rowspan = row_span;
+          let col_span = tag
+            .attributes()
+            .find(|res| encoding::decode(res.as_ref().unwrap().key.0, UTF_8).unwrap() == "colspan")
+            .map(|res| {
+              encoding::decode(&res.unwrap().value, UTF_8)
+                .unwrap()
+                .parse::<usize>()
+                .unwrap()
+            })
+            .unwrap_or(1);
+          tmp_colspan = col_span;
+        }
         _ => (),
       },
       Ok(Event::End(tag)) => match tag.name().as_ref() {
@@ -350,7 +428,7 @@ where
           is_target_item = target.item.is_none();
           is_child = false;
         }
-        b"SubItem1" => {
+        b"Subitem1" => {
           is_target_sub_item_1 = target
             .sub_item
             .as_ref()
@@ -358,7 +436,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem2" => {
+        b"Subitem2" => {
           is_target_sub_item_2 = target
             .sub_item
             .as_ref()
@@ -366,7 +444,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem3" => {
+        b"Subitem3" => {
           is_target_sub_item_3 = target
             .sub_item
             .as_ref()
@@ -374,7 +452,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem4" => {
+        b"Subitem4" => {
           is_target_sub_item_4 = target
             .sub_item
             .as_ref()
@@ -382,7 +460,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem5" => {
+        b"Subitem5" => {
           is_target_sub_item_5 = target
             .sub_item
             .as_ref()
@@ -390,7 +468,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem6" => {
+        b"Subitem6" => {
           is_target_sub_item_6 = target
             .sub_item
             .as_ref()
@@ -398,7 +476,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem7" => {
+        b"Subitem7" => {
           is_target_sub_item_7 = target
             .sub_item
             .as_ref()
@@ -406,7 +484,7 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SubItem8" => {
+        b"Subitem8" => {
           is_target_sub_item_8 = target
             .sub_item
             .as_ref()
@@ -414,21 +492,64 @@ where
             .unwrap_or(true);
           is_child = false;
         }
-        b"SupplProvision" => {
-          is_target_suppl_provision = target.suppl_provision_title.is_none();
+        b"Subitem9" => {
+          is_target_sub_item_9 = target
+            .sub_item
+            .as_ref()
+            .map(|(i, _)| *i < 9)
+            .unwrap_or(true);
+          is_child = false;
         }
-        b"Sentence" => {
-          is_sentence = false;
+        b"SupplProvision" => is_target_suppl_provision = target.suppl_provision_title.is_none(),
+        b"Rt" => is_ruby_rt = false,
+        b"Sentence" => is_sentence = false,
+        b"ParagraphSentence" | b"ItemSentence" | b"Subitem1Sentence" | b"Subitem2Sentence"
+        | b"Subitem3Sentence" | b"Subitem4Sentence" | b"Subitem5Sentence" | b"Subitem6Sentence"
+        | b"Subitem7Sentence" | b"Subitem8Sentence" | b"Subitem9Sentence" => {
           if !tmp_text.is_empty() {
             let law_text = LawText {
               is_child: is_child,
-              contents: tmp_text,
+              contents: LawContents::Text(tmp_text),
             };
             law_text_lst.push(law_text);
             tmp_text = String::new();
           }
         }
-        b"Rt" => is_ruby_rt = false,
+        b"TableColumn" => {
+          if !tmp_text.is_empty() {
+            let law_column = LawTableColumn {
+              rowspan: tmp_rowspan,
+              colspan: tmp_colspan,
+              contents: LawTableContents::Text(tmp_text),
+            };
+            tmp_table_col.push(law_column);
+            tmp_text = String::new();
+          }
+        }
+        b"TableRow" => {
+          if !tmp_text.is_empty() {
+            let row = LawTable {
+              row: tmp_table_col.clone(),
+            };
+            tmp_table_row.push(row);
+            tmp_table_col = Vec::new();
+            tmp_rowspan = 1;
+            tmp_colspan = 1;
+            tmp_text = String::new();
+          }
+        }
+        b"Table" => {
+          let law_text = LawText {
+            is_child: is_child,
+            contents: LawContents::Table(tmp_table_row.clone()),
+          };
+          law_text_lst.push(law_text);
+          tmp_table_row = Vec::new();
+          tmp_table_col = Vec::new();
+          tmp_rowspan = 1;
+          tmp_colspan = 1;
+          tmp_text = String::new();
+        }
         _ => (),
       },
       Ok(Event::Text(text)) => {
@@ -443,6 +564,7 @@ where
           && is_target_sub_item_6
           && is_target_sub_item_7
           && is_target_sub_item_8
+          && is_target_sub_item_9
           && is_target_suppl_provision
           && is_sentence
           && !is_ruby_rt
