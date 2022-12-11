@@ -11,10 +11,12 @@ description = "e-govで公開されている条例XMデータから指定され�
 
 [dependencies]
 encoding_rs = "0.8.31"
+mecab = "0.1.5"
 quick-xml = { version = "0.26.0", features = ["async-tokio", "encoding"] }
 serde = { version = "1.0.147", features = ["derive"] }
 thiserror = "1.0.37"
-tokio = "1.22.0"
+tokio = { version ="1.22.0", features = ["full"] }
+tokio-stream = "0.1.11"
 
 [dev-dependencies]
 tokio = {version="1.22.0", features=["macros", "rt"]}
