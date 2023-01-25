@@ -60,11 +60,11 @@ pub struct ArticleTargetInfo {
 }
 
 pub async fn search_law_text(
-  xml_str: &str,
+  xml_buf: &[u8],
   target: &ArticleTargetInfo,
 ) -> Result<Vec<LawText>, SearchArticleError> {
   let mut buf = Vec::new();
-  let mut xml_reader = Reader::from_str(xml_str);
+  let mut xml_reader = Reader::from_reader(xml_buf);
   xml_reader.trim_text(true);
 
   let mut law_text_lst = vec![];

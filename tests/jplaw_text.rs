@@ -1,6 +1,5 @@
 use jplaw_text::*;
-use quick_xml::Reader;
-use tokio::{self, io::BufReader};
+use tokio;
 
 const LAW_XML: &str = r#"
 <Section Num="4">
@@ -70,7 +69,7 @@ async fn check1() {
       contents : LawContents::Text("戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string())
     },
   ];
-  let gen_law_text_lst = search_law_text(LAW_XML, &target).await.unwrap();
+  let gen_law_text_lst = search_law_text(LAW_XML.as_bytes(), &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
 
@@ -94,7 +93,7 @@ async fn check2() {
       contents : LawContents::Text("戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string())
     },
   ];
-  let gen_law_text_lst = search_law_text(LAW_XML, &target).await.unwrap();
+  let gen_law_text_lst = search_law_text(LAW_XML.as_bytes(), &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
 
@@ -198,6 +197,6 @@ async fn check3() {
       },
     ]),
   }];
-  let gen_law_text_lst = search_law_text(str, &target).await.unwrap();
+  let gen_law_text_lst = search_law_text(str.as_bytes(), &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
