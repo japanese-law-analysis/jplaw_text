@@ -56,8 +56,6 @@ const LAW_XML: &str = r#"
 
 #[tokio::test]
 async fn check1() {
-  let mut reader = Reader::from_reader(BufReader::new(LAW_XML.as_bytes()));
-
   let target = ArticleTargetInfo {
     article: "30".to_string(),
     paragraph: Some("2".to_string()),
@@ -72,14 +70,12 @@ async fn check1() {
       contents : LawContents::Text("戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string())
     },
   ];
-  let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
+  let gen_law_text_lst = search_law_text(LAW_XML, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
 
 #[tokio::test]
 async fn check2() {
-  let mut reader = Reader::from_reader(BufReader::new(LAW_XML.as_bytes()));
-
   let target = ArticleTargetInfo {
     article: "30".to_string(),
     paragraph: None,
@@ -98,7 +94,7 @@ async fn check2() {
       contents : LawContents::Text("戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string())
     },
   ];
-  let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
+  let gen_law_text_lst = search_law_text(LAW_XML, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }
 
@@ -145,8 +141,6 @@ async fn check3() {
     </Paragraph>
   </Article>
 </Chapter>"#;
-
-  let mut reader = Reader::from_reader(BufReader::new(str.as_bytes()));
 
   let target = ArticleTargetInfo {
     article: "30".to_string(),
@@ -204,6 +198,6 @@ async fn check3() {
       },
     ]),
   }];
-  let gen_law_text_lst = search_law_text(&mut reader, &target).await.unwrap();
+  let gen_law_text_lst = search_law_text(str, &target).await.unwrap();
   assert_eq!(law_text_lst, gen_law_text_lst)
 }

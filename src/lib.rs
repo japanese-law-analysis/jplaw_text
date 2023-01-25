@@ -2,7 +2,6 @@ use encoding_rs::UTF_8;
 use quick_xml::{encoding, events::Event, Reader};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tokio::io::AsyncBufRead;
 
 #[derive(Debug, Error, Clone, PartialEq, Eq, Hash)]
 pub enum SearchArticleError {
@@ -60,14 +59,12 @@ pub struct ArticleTargetInfo {
   pub suppl_provision_title: Option<String>,
 }
 
-pub async fn search_law_text<T>(
-  xml_reader: &mut Reader<T>,
+pub async fn search_law_text(
+  xml_str: &str,
   target: &ArticleTargetInfo,
-) -> Result<Vec<LawText>, SearchArticleError>
-where
-  T: AsyncBufRead + Unpin,
-{
+) -> Result<Vec<LawText>, SearchArticleError> {
   let mut buf = Vec::new();
+  let mut xml_reader = Reader::from_str(xml_str);
   xml_reader.trim_text(true);
 
   let mut law_text_lst = vec![];
@@ -510,7 +507,7 @@ where
         | b"Subitem7Sentence" | b"Subitem8Sentence" | b"Subitem9Sentence" => {
           if !tmp_text.is_empty() {
             let law_text = LawText {
-              is_child: is_child,
+              is_child,
               contents: LawContents::Text(tmp_text),
             };
             law_text_lst.push(law_text);
@@ -546,7 +543,7 @@ where
         b"Table" => {
           if !tmp_table_row.is_empty() {
             let law_text = LawText {
-              is_child: is_child,
+              is_child,
               contents: LawContents::Table(tmp_table_row.clone()),
             };
             law_text_lst.push(law_text);
