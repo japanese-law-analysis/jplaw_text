@@ -127,7 +127,6 @@ pub async fn search_law_text(
 
   let mut tmp_text = String::new();
 
-  let mut is_table_column = false;
   let mut tmp_table_row = Vec::new();
   let mut tmp_table_col = Vec::new();
   let mut tmp_rowspan = 1;
@@ -410,7 +409,6 @@ pub async fn search_law_text(
             })
             .unwrap_or(1);
           tmp_colspan = col_span;
-          is_table_column = true;
         }
         _ => (),
       },
@@ -526,10 +524,9 @@ pub async fn search_law_text(
           tmp_rowspan = 1;
           tmp_colspan = 1;
           tmp_text = String::new();
-          is_table_column = false;
         }
         b"TableRow" => {
-          if !tmp_text.is_empty() {
+          if !tmp_table_col.is_empty() {
             let row = LawTable {
               row: tmp_table_col.clone(),
             };
@@ -558,24 +555,24 @@ pub async fn search_law_text(
       },
       Ok(Event::Text(text)) => {
         if is_target_article
-          && ((is_target_paragraph
-            && is_target_item
-            && is_target_sub_item_1
-            && is_target_sub_item_2
-            && is_target_sub_item_3
-            && is_target_sub_item_4
-            && is_target_sub_item_5
-            && is_target_sub_item_6
-            && is_target_sub_item_7
-            && is_target_sub_item_8
-            && is_target_sub_item_9
-            && is_target_suppl_provision
-            && is_sentence
-            && !is_ruby_rt)
-            || is_table_column)
+          && is_target_paragraph
+          && is_target_item
+          && is_target_sub_item_1
+          && is_target_sub_item_2
+          && is_target_sub_item_3
+          && is_target_sub_item_4
+          && is_target_sub_item_5
+          && is_target_sub_item_6
+          && is_target_sub_item_7
+          && is_target_sub_item_8
+          && is_target_sub_item_9
+          && is_target_suppl_provision
+          && is_sentence
+          && !is_ruby_rt
         {
           let text_str = encoding::decode(&text.into_inner(), UTF_8)
             .unwrap()
+            .trim()
             .to_string();
           tmp_text.push_str(&text_str);
         }
