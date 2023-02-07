@@ -143,7 +143,7 @@ async fn check3() {
 
   let target = ArticleTargetInfo {
     article: "30".to_string(),
-    paragraph: None,
+    paragraph: Some("1".to_string()),
     item: None,
     sub_item: None,
     suppl_provision_title: None,
@@ -162,7 +162,7 @@ async fn check3() {
           LawTableColumn {
             rowspan: 1,
             colspan: 1,
-            contents: LawTableContents::Text("第三条 ".to_string()),
+            contents: LawTableContents::Text("第三条".to_string()),
           },
           LawTableColumn {
             rowspan: 1,
