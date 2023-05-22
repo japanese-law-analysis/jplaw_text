@@ -45,12 +45,12 @@ pub enum LawContents {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct LawText {
-  pub is_child: bool,
+  pub article_info: Article,
   pub contents: LawContents,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, Default)]
-pub struct ArticleTargetInfo {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+pub struct Article {
   /// 条
   pub article: String,
   /// 項
@@ -61,77 +61,108 @@ pub struct ArticleTargetInfo {
   pub item: Option<String>,
   /// イロハなど（深さも必要）
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub sub_item: Option<(usize, String)>,
+  pub sub_item: Option<Vec<String>>,
   /// 附則の場合
   #[serde(skip_serializing_if = "Option::is_none")]
   pub suppl_provision_title: Option<String>,
 }
 
-pub async fn search_law_text(
-  xml_buf: &[u8],
-  target: &ArticleTargetInfo,
-) -> Result<Vec<LawText>, SearchArticleError> {
+impl Article {
+  fn new() -> Self {
+    Article {
+      article: String::new(),
+      paragraph: None,
+      item: None,
+      sub_item: None,
+      suppl_provision_title: None,
+    }
+  }
+
+  fn update_article(&mut self, article: String) {
+    *self = Article {
+      article,
+      paragraph: None,
+      item: None,
+      sub_item: None,
+      suppl_provision_title: self.clone().suppl_provision_title,
+    }
+  }
+
+  fn update_paragraph(&mut self, p: String) {
+    *self = Article {
+      article: self.clone().article,
+      paragraph: Some(p),
+      item: None,
+      sub_item: None,
+      suppl_provision_title: self.clone().suppl_provision_title,
+    }
+  }
+
+  fn update_item(&mut self, i: String) {
+    *self = Article {
+      article: self.clone().article,
+      paragraph: self.clone().paragraph,
+      item: Some(i),
+      sub_item: None,
+      suppl_provision_title: self.clone().suppl_provision_title,
+    }
+  }
+
+  fn update_sub_item(&mut self, n: usize, s: String) {
+    let mut new_sub_item_lst = Vec::new();
+    if let Some(sub_item_lst) = &self.sub_item {
+      for i in 1..=n {
+        if i == n {
+          new_sub_item_lst.push(s.clone())
+        } else {
+          match sub_item_lst.get(i) {
+            None => new_sub_item_lst.push(String::new()),
+            Some(s) => new_sub_item_lst.push(s.clone()),
+          }
+        }
+      }
+    } else {
+      for i in 1..=n {
+        if i == n {
+          new_sub_item_lst.push(s.clone())
+        } else {
+          new_sub_item_lst.push(String::new())
+        }
+      }
+    };
+
+    *self = Article {
+      article: self.clone().article,
+      paragraph: self.clone().paragraph,
+      item: self.clone().item,
+      sub_item: Some(new_sub_item_lst),
+      suppl_provision_title: self.clone().suppl_provision_title,
+    }
+  }
+
+  fn update_suppl_provision_title(&mut self, title: String) {
+    *self = Article {
+      article: String::new(),
+      paragraph: None,
+      item: None,
+      sub_item: None,
+      suppl_provision_title: Some(title),
+    }
+  }
+}
+
+pub async fn xml_to_law_text(xml_buf: &[u8]) -> Result<Vec<LawText>, SearchArticleError> {
   let mut buf = Vec::new();
   let mut xml_reader = Reader::from_reader(xml_buf);
   xml_reader.trim_text(true);
 
   let mut law_text_lst = vec![];
 
-  let mut is_target_article = false;
-  let mut is_target_paragraph = target.paragraph.is_none();
-  let mut is_target_item = target.item.is_none();
-  let mut is_target_sub_item_1 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 1)
-    .unwrap_or(true);
-  let mut is_target_sub_item_2 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 2)
-    .unwrap_or(true);
-  let mut is_target_sub_item_3 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 3)
-    .unwrap_or(true);
-  let mut is_target_sub_item_4 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 4)
-    .unwrap_or(true);
-  let mut is_target_sub_item_5 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 5)
-    .unwrap_or(true);
-  let mut is_target_sub_item_6 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 6)
-    .unwrap_or(true);
-  let mut is_target_sub_item_7 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 7)
-    .unwrap_or(true);
-  let mut is_target_sub_item_8 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 8)
-    .unwrap_or(true);
-  let mut is_target_sub_item_9 = target
-    .sub_item
-    .as_ref()
-    .map(|(i, _)| *i < 9)
-    .unwrap_or(true);
-  let mut is_target_suppl_provision = target.suppl_provision_title.is_none();
+  let mut now_article = Article::new();
 
   let mut is_ruby_rt = false;
 
   let mut is_sentence = false;
-
-  let mut is_child = false;
 
   let mut tmp_text = String::new();
 
@@ -153,8 +184,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_article = article_num_str == target.article;
-          is_child = false;
+          now_article.update_article(article_num_str);
         }
         b"Paragraph" => {
           let num_str = tag
@@ -166,12 +196,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_paragraph = target
-            .paragraph
-            .as_ref()
-            .map(|s| s == &num_str)
-            .unwrap_or(true);
-          is_child = target.paragraph.is_none();
+          now_article.update_paragraph(num_str);
         }
         b"Item" => {
           let num_str = tag
@@ -183,8 +208,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_item = target.item.as_ref().map(|s| s == &num_str).unwrap_or(true);
-          is_child = target.item.is_none();
+          now_article.update_item(num_str);
         }
         b"Subitem1" => {
           let num_str = tag
@@ -196,16 +220,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_1 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 1 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 1)
-            .unwrap_or(true);
+          now_article.update_sub_item(1, num_str);
         }
         b"Subitem2" => {
           let num_str = tag
@@ -217,16 +232,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_2 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 2 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 2)
-            .unwrap_or(true);
+          now_article.update_sub_item(2, num_str);
         }
         b"Subitem3" => {
           let num_str = tag
@@ -238,16 +244,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_3 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 3 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 3)
-            .unwrap_or(true);
+          now_article.update_sub_item(3, num_str);
         }
         b"Subitem4" => {
           let num_str = tag
@@ -259,16 +256,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_4 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 4 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 4)
-            .unwrap_or(true);
+          now_article.update_sub_item(4, num_str);
         }
         b"Subitem5" => {
           let num_str = tag
@@ -280,16 +268,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_5 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 5 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 6)
-            .unwrap_or(true);
+          now_article.update_sub_item(5, num_str);
         }
         b"Subitem6" => {
           let num_str = tag
@@ -301,16 +280,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_6 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 6 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 6)
-            .unwrap_or(true);
+          now_article.update_sub_item(6, num_str);
         }
         b"Subitem7" => {
           let num_str = tag
@@ -322,16 +292,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_7 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 7 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 7)
-            .unwrap_or(true);
+          now_article.update_sub_item(7, num_str);
         }
         b"Subitem8" => {
           let num_str = tag
@@ -343,16 +304,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_8 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 8 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 8)
-            .unwrap_or(true);
+          now_article.update_sub_item(8, num_str);
         }
         b"Subitem9" => {
           let num_str = tag
@@ -364,16 +316,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap();
-          is_target_sub_item_9 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, s)| *i == 8 && s == &num_str)
-            .unwrap_or(true);
-          is_child = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 9)
-            .unwrap_or(true);
+          now_article.update_sub_item(9, num_str);
         }
         b"SupplProvision" => {
           let suppl_provision_title_str = tag
@@ -387,8 +330,7 @@ pub async fn search_law_text(
                 .to_string()
             })
             .unwrap_or_default();
-          is_target_suppl_provision =
-            Some(suppl_provision_title_str) == target.suppl_provision_title;
+          now_article.update_suppl_provision_title(suppl_provision_title_str);
         }
         b"Sentence" => {
           is_sentence = true;
@@ -421,91 +363,6 @@ pub async fn search_law_text(
         _ => (),
       },
       Ok(Event::End(tag)) => match tag.name().as_ref() {
-        b"Article" => {
-          is_target_article = false;
-          is_child = false;
-        }
-        b"Paragraph" => {
-          is_target_paragraph = target.paragraph.is_none();
-          is_child = false;
-        }
-        b"Item" => {
-          is_target_item = target.item.is_none();
-          is_child = false;
-        }
-        b"Subitem1" => {
-          is_target_sub_item_1 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 1)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem2" => {
-          is_target_sub_item_2 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 2)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem3" => {
-          is_target_sub_item_3 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 3)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem4" => {
-          is_target_sub_item_4 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 4)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem5" => {
-          is_target_sub_item_5 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 5)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem6" => {
-          is_target_sub_item_6 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 6)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem7" => {
-          is_target_sub_item_7 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 7)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem8" => {
-          is_target_sub_item_8 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 8)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"Subitem9" => {
-          is_target_sub_item_9 = target
-            .sub_item
-            .as_ref()
-            .map(|(i, _)| *i < 9)
-            .unwrap_or(true);
-          is_child = false;
-        }
-        b"SupplProvision" => is_target_suppl_provision = target.suppl_provision_title.is_none(),
         b"Rt" => is_ruby_rt = false,
         b"Sentence" => is_sentence = false,
         b"ParagraphSentence" | b"ItemSentence" | b"Subitem1Sentence" | b"Subitem2Sentence"
@@ -513,7 +370,7 @@ pub async fn search_law_text(
         | b"Subitem7Sentence" | b"Subitem8Sentence" | b"Subitem9Sentence" => {
           if !tmp_text.is_empty() {
             let law_text = LawText {
-              is_child,
+              article_info: now_article.clone(),
               contents: LawContents::Text(tmp_text),
             };
             law_text_lst.push(law_text);
@@ -548,7 +405,7 @@ pub async fn search_law_text(
         b"Table" => {
           if !tmp_table_row.is_empty() {
             let law_text = LawText {
-              is_child,
+              article_info: now_article.clone(),
               contents: LawContents::Table(tmp_table_row.clone()),
             };
             law_text_lst.push(law_text);
@@ -562,22 +419,7 @@ pub async fn search_law_text(
         _ => (),
       },
       Ok(Event::Text(text)) => {
-        if is_target_article
-          && is_target_paragraph
-          && is_target_item
-          && is_target_sub_item_1
-          && is_target_sub_item_2
-          && is_target_sub_item_3
-          && is_target_sub_item_4
-          && is_target_sub_item_5
-          && is_target_sub_item_6
-          && is_target_sub_item_7
-          && is_target_sub_item_8
-          && is_target_sub_item_9
-          && is_target_suppl_provision
-          && is_sentence
-          && !is_ruby_rt
-        {
+        if is_sentence && !is_ruby_rt {
           let text_str = encoding::decode(&text.into_inner(), UTF_8)
             .unwrap()
             .trim()
@@ -591,4 +433,42 @@ pub async fn search_law_text(
     }
   }
   Ok(law_text_lst)
+}
+
+pub async fn search_law_text(
+  xml_buf: &[u8],
+  target: &Article,
+) -> Result<Vec<LawText>, SearchArticleError> {
+  let v = xml_to_law_text(xml_buf)
+    .await?
+    .iter()
+    .filter(|v| {
+      let article_info = &v.article_info;
+      let is_t_a = article_info.article == target.article;
+      // targetのparagraphがNoneならば、article_infoのそれがどんな値でも良い
+      // どうせ全ての値がtrueでないといけないので、目標の物ではない場合は他の値によって弾ける
+      let is_t_p = target.paragraph.is_none() || article_info.paragraph == target.paragraph;
+      let is_t_i = target.item.is_none() || article_info.item == target.item;
+      let is_t_si = target.sub_item.is_none()
+        || target
+          .clone()
+          .sub_item
+          .map(|lst| {
+            let len = lst.len();
+            match &article_info.sub_item {
+              None => false,
+              Some(v) => {
+                let lst2 = v.iter().take(len).cloned().collect::<Vec<_>>();
+                lst2 == lst
+              }
+            }
+          })
+          .unwrap_or(false);
+      let is_t_spt = target.suppl_provision_title.is_none()
+        || article_info.suppl_provision_title == target.suppl_provision_title;
+      is_t_a && is_t_p && is_t_i && is_t_si && is_t_spt
+    })
+    .cloned()
+    .collect::<Vec<_>>();
+  Ok(v)
 }
