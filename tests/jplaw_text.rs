@@ -55,7 +55,7 @@ const LAW_XML: &str = r#"
 
 #[tokio::test]
 async fn check1() {
-  let target = ArticleTargetInfo {
+  let target = Article {
     article: "30".to_string(),
     paragraph: Some("2".to_string()),
     item: None,
@@ -65,7 +65,13 @@ async fn check1() {
 
   let law_text_lst = vec![
     LawText {
-      is_child : false,
+      article_info: Article {
+        article: "30".to_string(),
+        paragraph: Some("2".to_string()),
+        item: None,
+        sub_item: None,
+        suppl_provision_title: None,
+      },
       contents : LawContents::Text("戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string())
     },
   ];
@@ -75,7 +81,7 @@ async fn check1() {
 
 #[tokio::test]
 async fn check2() {
-  let target = ArticleTargetInfo {
+  let target = Article {
     article: "30".to_string(),
     paragraph: None,
     item: None,
@@ -85,11 +91,23 @@ async fn check2() {
 
   let law_text_lst = vec![
     LawText {
-      is_child : true,
+      article_info: Article {
+        article: "30".to_string(),
+        paragraph: Some("1".to_string()),
+        item: None,
+        sub_item: None,
+        suppl_provision_title: None,
+      },
       contents : LawContents::Text("不在者の生死が七年間明らかでないときは、家庭裁判所は、利害関係人の請求により、失踪の宣告をすることができる。".to_string())
     },
     LawText {
-      is_child : true,
+      article_info: Article {
+        article: "30".to_string(),
+        paragraph: Some("2".to_string()),
+        item: None,
+        sub_item: None,
+        suppl_provision_title: None,
+      },
       contents : LawContents::Text("戦地に臨んだ者、沈没した船舶の中に在った者その他死亡の原因となるべき危難に遭遇した者の生死が、それぞれ、戦争が止んだ後、船舶が沈没した後又はその他の危難が去った後一年間明らかでないときも、前項と同様とする。".to_string())
     },
   ];
@@ -141,7 +159,7 @@ async fn check3() {
   </Article>
 </Chapter>"#;
 
-  let target = ArticleTargetInfo {
+  let target = Article {
     article: "30".to_string(),
     paragraph: Some("1".to_string()),
     item: None,
@@ -151,11 +169,23 @@ async fn check3() {
 
   let law_text_lst = vec![
     LawText {
-      is_child : false,
+      article_info: Article {
+        article: "30".to_string(),
+        paragraph: Some("1".to_string()),
+        item: None,
+        sub_item: None,
+        suppl_provision_title: None,
+      },
       contents : LawContents::Text("第三条から第二十六条まで及び第二十七条から前条までの規定は、法第十八条第四項の規定により託送供給等約款で設定した料金を変更しようとする一般送配電事業者が、変更しようとする託送供給等約款で設定する料金を算定する場合に準用する。この場合において、次の表の上欄に掲げる規定中同表の中欄に掲げる字句は、それぞれ同表の下欄に掲げる字句に読み替えるものとする。".to_string())
     },
     LawText {
-    is_child: false,
+      article_info: Article {
+        article: "30".to_string(),
+        paragraph: Some("1".to_string()),
+        item: None,
+        sub_item: None,
+        suppl_provision_title: None,
+      },
     contents: LawContents::Table(vec![
       LawTable {
         row: vec![
